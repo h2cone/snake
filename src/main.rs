@@ -2,15 +2,15 @@ use bevy::{
     math::{ivec3, uvec2},
     prelude::*,
 };
-use bevy_simple_tilemap::{plugin::SimpleTileMapPlugin, Tile, TileMap};
+use bevy_simple_tilemap::{plugin::SimpleTileMapPlugin, Tile, TileFlags, TileMap};
 
 use rand::prelude::*;
 
 const TILE_SCALE: f32 = 2.;
 const TILE_WIDTH: f32 = 16. * TILE_SCALE;
 const TILE_HEIGHT: f32 = 16. * TILE_SCALE;
-const TILE_ROWS: i32 = 10;
-const TILE_COLUMNS: i32 = 10;
+const TILE_ROWS: i32 = 12;
+const TILE_COLUMNS: i32 = 12;
 
 const SNAKE_TIMER_DURATION: f32 = 0.4;
 
@@ -104,7 +104,7 @@ fn movment(
                 tilemap.set_tile(
                     food_pos,
                     Some(Tile {
-                        sprite_index: 2,
+                        sprite_index: 1,
                         ..default()
                     }),
                 );
@@ -151,16 +151,30 @@ fn update_snake(new_pos: IVec3, snake: &mut Snake, tilemap: &mut TileMap) {
         snake.segments[i] = next;
     }
     snake.segments.pop();
-    snake.segments.push(new_pos);
     for seg in snake.segments.iter() {
         tilemap.set_tile(
             *seg,
             Some(Tile {
-                sprite_index: 1,
+                sprite_index: 2,
                 ..default()
             }),
         );
     }
+    snake.segments.push(new_pos);
+    let (idx, flags) = match snake.direction {
+        Direction::Up => (3, TileFlags::default()),
+        Direction::Down => (3, TileFlags::FLIP_Y),
+        Direction::Left => (4, TileFlags::FLIP_X),
+        Direction::Right => (4, TileFlags::default()),
+    };
+    tilemap.set_tile(
+        new_pos,
+        Some(Tile {
+            sprite_index: idx,
+            flags,
+            ..default()
+        }),
+    );
 }
 
 fn startup(
@@ -171,7 +185,7 @@ fn startup(
     commands.spawn(Camera2d::default());
 
     let image = asset_server.load("textures/tilesheet.png");
-    let atlas = TextureAtlasLayout::from_grid(uvec2(16, 16), 1, 4, None, None);
+    let atlas = TextureAtlasLayout::from_grid(uvec2(16, 16), 5, 1, None, None);
     let atlas_handle = texture_atlases.add(atlas);
 
     let mut tiles = Vec::new();
@@ -191,23 +205,31 @@ fn startup(
 
     // snake head pos
     let head = ivec3(0, 2, 0);
-    let segments = vec![ivec3(0, 0, 0), ivec3(0, 1, 0), head];
+    tilemap.set_tile(
+        head,
+        Some(Tile {
+            sprite_index: 3,
+            ..default()
+        }),
+    );
+    let mut segments = vec![ivec3(0, 0, 0), ivec3(0, 1, 0)];
     for seg in segments.iter() {
         tilemap.set_tile(
             *seg,
             Some(Tile {
-                sprite_index: 1,
+                sprite_index: 2,
                 ..default()
             }),
         );
     }
+    segments.push(head);
 
     // food pos
     let food = generate_food(&segments).expect("No food position");
     tilemap.set_tile(
         food,
         Some(Tile {
-            sprite_index: 2,
+            sprite_index: 1,
             ..default()
         }),
     );
